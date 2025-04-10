@@ -1,0 +1,5 @@
+# Ignore all files in Inference/models/
+Inference/models/*
+
+# But keep the directory itself (optional)
+!Inference/models/.gitkeep

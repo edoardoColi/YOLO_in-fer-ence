@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-Fer-Ence</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin: 5px 0;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .status {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flask Inference Splitting Control Panel</h1>
+    
+    <div class="status">
+        <p>- Current Status: {{ status }}</p>
+    </div>
+    
+    <form action="/change_status" method="POST">
+        <label>Change Status to:</label>
+        <select name="status">
+            {% for key, value in valid_statuses %}
+                <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ key | capitalize }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Change</button>
+    </form>
+
+    <div class="status">
+        <p>- Current Inference Model: {{ model }}</p>
+    </div>
+    
+    <form action="/change_model" method="POST">
+        <label>Change Model to:</label>
+        <select name="model">
+            {% for key, value in model_list %}
+            <option value="{{ key }}" {% if model == key %}selected{% endif %}>{{ key | capitalize }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Change</button>
+    </form>
+
+    <div class="status">
+        <p>- Current Input Source: {{ input }}</p>
+    </div>
+    
+    <form action="/change_input_video" method="POST">
+        <label>Change Input Source (e.g. /dev/video0 or stream URL, RTMP, HLS (.m3u8)):</label>
+        <input type="text" name="input_video" placeholder="/dev/video0 or http://..." required>
+        <button type="submit">Change</button>
+    </form>
+
+    <!-- <form action="/change_input" method="POST">
+        <label>Change Video Input to:</label>
+        <select name="model">
+            {% for key, value in model_list %}
+            <option value="{{ key }}" {% if model == key %}selected{% endif %}>{{ key | capitalize }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Change</button>
+    </form> -->
+
+    <form action="/start_loop" method="POST">
+        <button type="submit" style="background-color: #FFD700; color: #333; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 8px;">
+            Start
+        </button>
+    </form>
+    
+</body>
+</html>

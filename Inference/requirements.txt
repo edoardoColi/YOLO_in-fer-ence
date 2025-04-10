@@ -1,0 +1,8 @@
+flask
+opencv-python
+# pika
+# lz4
+# onnxruntime
+# onnxslim
+# pycuda
+# numpy==1.23.5

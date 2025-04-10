@@ -1,0 +1,19 @@
+services:
+  inference_service:
+    build: ./Inference     # Use the Dockerfile in the specified directory
+    container_name: yolo_inference
+    environment:
+      - STATS_PRINT=True
+      - RUNNING_PORT=5000
+      - STARTUP_STATUS=idle
+      # - INPUT_SRC=/dev/video0
+      # - STARTUP_MODEL=best.pt
+      
+    privileged: true        # Grants elevated privileges, allows direct access to host devices and kernel features, often required for hardware acceleration and device access
+    volumes:
+      # - ./models/:/usr/src/ultralytics/models/  # Provide access to pre-trained/custom model without rebuilding the container
+      - /tmp/.X11-unix:/tmp/.X11-unix           # Allows GUI-based applications to communicate with the host's X server, enabling visualization of outputs like image displays
+      - /dev:/dev:ro                            # Usefull for camera devices
+      - /etc/localtime:/etc/localtime:ro        # Ensures the container uses the same timezone by mounting the system's localtime in read-only mode, helping to maintain consistent time-based logging
+    # runtime: nvidia       # Enables GPU-accelerated workloads, without this runtime the container cannot utilize GPU hardware
+    network_mode: host    # Useful for performance-critical applications like those requiring low-latency networking or GPU access
