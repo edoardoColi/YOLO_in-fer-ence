@@ -3,6 +3,7 @@ import cv2
 import time
 import logging
 import threading
+from ultralytics import YOLO
 # import io
 # import sys
 # import json
@@ -16,7 +17,6 @@ import threading
 # import threading
 # import lz4.frame
 # import numpy as np
-# from ultralytics import YOLO
 # from torchvision import transforms
 # from collections import defaultdict
 # from ultralytics.engine.results import Results
@@ -41,7 +41,7 @@ VALID_STATUSES = {
 }
 
 # Status variables
-STATS_PRINT = os.getenv('STATS_PRINT', 'false').lower() in ('true', '1', 't', 'yes', 'y')
+STATS_PRINT = os.getenv('STATS_PRINT', 'true').lower() in ('true', '1', 't', 'yes', 'y')
 RUNNING_PORT = int(os.getenv('RUNNING_PORT', 5000))     # Set RUNNING_PORT to True if the environment variable 'STATS_PRINT' is {true, 1, t, yes, y}, else False
 STATUS = VALID_STATUSES.get(os.getenv('STARTUP_STATUS', 'idle').lower(), VALID_STATUSES['idle'])        # Get status code from environment, defaulting to 'idle' if unset or invalid
 MODEL_DIR = '/models'
@@ -64,6 +64,7 @@ if STATS_PRINT:
 
 app.logger.info("###### Configuration Recap:")
 app.logger.info(f"Valid Statuses: {list(VALID_STATUSES.keys())}")
+app.logger.info(f"Detected Models: {list(MODEL_LIST.values())}")
 app.logger.info(f"Running Port: {RUNNING_PORT}")
 app.logger.info(f"Current Status: {app.config['STATUS']}")
 app.logger.info(f"Current Model: {app.config['MODEL']}")
@@ -1400,14 +1401,16 @@ control_background_thread = None
 
 def init_source_settings(cap, target_width, target_height, target_fps):
     """
-    Initializes the camera settings with the specified resolution and FPS.
+    Initializes the source settings with the specified resolution and FPS.
 
     :param cap: The cv2.VideoCapture object
-    :param target_width: The desired width for the camera feed
-    :param target_height: The desired height for the camera feed
-    :param target_fps: The desired frames per second for the camera feed
+    :param target_width: The desired width for the source feed
+    :param target_height: The desired height for the source feed
+    :param target_fps: The desired frames per second for the source feed
     :return: None, updates the settings on the provided cap object
     """
+    app.logger.info("Initializing video source")
+
     # Impose the settings
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, target_width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, target_height)
@@ -1430,22 +1433,33 @@ def init_source_settings(cap, target_width, target_height, target_fps):
         app.logger.warning(f"Warning: Desired resolution of {target_width}x{target_height} is not supported. Using {current_width}x{current_height} instead.")
 
 def control_loop():
-    app.logger.info("ciao")
     if app.config['STATUS'] == 0: #idle
         return
 
-
+    model_path = MODEL_LIST.get(app.config.get('MODEL', None))
+    if model_path is None:
+        app.logger.error("Error: model configuration is missing.")
+        cap.release()
+        return
+    cnn = YOLO(model_path)     # for i, layer in enumerate(cnn.model.model): print(f"Layer {i}: {layer}", flush=True)
+    for i, layer in enumerate(cnn.model.model): print(f"Layer {i}: {layer}", flush=True)
 
     cap = cv2.VideoCapture(app.config['INPUT_SRC'])
-    if not cap.isOpened():  #TODO aggiungi un controllo successivo per cui se non e' un video magari e' un gRPC -- Probabilmente la camera server solo per inferenza e offload
+    if not cap.isOpened():
         app.logger.error("Error: Could not open video source.")
-        return
-
-    init_source_settings(cap, 1080, 720, 30)
+        app.logger.info("Trying opening stream from gRPC...")
+        if not 0:
+            app.logger.error("Error: Could not open gRPC source.")
+        else:
+            app.logger.info("Initializing gRPC source")
+            # TODO aggiungi per avere un effettivo uso di gRPC
+            # init_gRPC()
+    else:
+        init_source_settings(cap, 1080, 720, 30)
 
     while True:     # TODO testa la velocita di inferenza normale e aprendo ogni layer
         if app.config['STATUS'] == 0: #idle
-            break
+            break   #TODO aggiungi il caso in cui lo stream finisce, pensare se break oppure aspettare e poi break
         app.logger.info("loop")
         time.sleep(1)
 
@@ -1459,7 +1473,7 @@ def update_config_variable(variable_name, current_value, new_value, dict_entry, 
     :param current_value: The current value of the variable.
     :param new_value: The new value from the user input (e.g., form submission).
     :param dict_entry: Can be 0 or 1 depending on if putting the value as the key(0) or the value(1)
-    :param valid_values: Optional dictionary or list of valid values for the variable. 
+    :param valid_values: Optional dictionary or list of valid values for the variable.
                           If None, no validation is performed.
     :return: The updated value or current value if invalid.
     """
@@ -1519,7 +1533,7 @@ def start_loop():
         control_background_thread = threading.Thread(target=control_loop, daemon=True)
         control_background_thread.start()
     else:
-        app.logger.info("Control loop already running. Doing nothing.")
+        app.logger.info("Control loop thread already running. Doing nothing.")
     
     return redirect('/')
 

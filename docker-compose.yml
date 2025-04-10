@@ -3,9 +3,9 @@ services:
     build: ./Inference     # Use the Dockerfile in the specified directory
     container_name: yolo_inference
     environment:
-      - STATS_PRINT=True
-      - RUNNING_PORT=5000
-      - STARTUP_STATUS=idle
+      # - STATS_PRINT=True
+      # - RUNNING_PORT=5000
+      - STARTUP_STATUS=inference
       # - INPUT_SRC=/dev/video0
       # - STARTUP_MODEL=best.pt
       
