@@ -1,6 +1,6 @@
 # FROM ultralytics/ultralytics:latest-jetson-jetpack6
-# FROM ultralytics/ultralytics:latest
-FROM python:3.13-slim
+FROM ultralytics/ultralytics:latest
+# FROM python:3.13-slim
 
 WORKDIR /app
 

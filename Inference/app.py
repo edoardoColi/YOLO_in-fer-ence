@@ -40,7 +40,7 @@ VALID_STATUSES = {
     'inference' : 7,
 }
 
-# Status variables
+# Status variables with the defaults or the values from the docker-compose environment
 STATS_PRINT = os.getenv('STATS_PRINT', 'true').lower() in ('true', '1', 't', 'yes', 'y')
 RUNNING_PORT = int(os.getenv('RUNNING_PORT', 5000))     # Set RUNNING_PORT to True if the environment variable 'STATS_PRINT' is {true, 1, t, yes, y}, else False
 STATUS = VALID_STATUSES.get(os.getenv('STARTUP_STATUS', 'idle').lower(), VALID_STATUSES['idle'])        # Get status code from environment, defaulting to 'idle' if unset or invalid
@@ -52,13 +52,14 @@ MODEL_LIST = {  os.path.relpath(filepath, MODEL_DIR): os.path.abspath(filepath)
                 for filepath in [os.path.join(root, f)]
             }
 MODEL = os.getenv('STARTUP_MODEL', '') if os.getenv('STARTUP_MODEL', '') in MODEL_LIST else next(iter(MODEL_LIST), None)
-INPUT_SRC = os.getenv('INPUT_SRC', '/dev/video0')   # Default is the camera, but can aslo bean online stream URL
+INPUT_SRC = os.getenv('INPUT_SRC', '/dev/video0')   # Default is the camera, but can also be an online stream URL
 
 # For adhering to Flask's best practices, then a global variable is later on modified
 app.config['STATUS'] = STATUS
 app.config['MODEL'] = MODEL
 app.config['INPUT_SRC'] = INPUT_SRC
 
+# Permit to have the printing of all the app messages from INFO to ERROR
 if STATS_PRINT:
     app.logger.setLevel(logging.INFO)
 
@@ -71,6 +72,7 @@ app.logger.info(f"Current Model: {app.config['MODEL']}")
 app.logger.info(f"Current Input Video: {app.config['INPUT_SRC']}")
 app.logger.info("######")
 
+# Reference for the control loop thread, for tracking during execution
 control_background_thread = None
 
 # MODEL = YOLO(f'{MODEL_FOLDER}Yolo/bestSanRossore.pt')          # [print(f"Layer {i}: {layer}") for i, layer in enumerate(MODEL.model.model)]
@@ -1401,7 +1403,7 @@ control_background_thread = None
 
 def init_source_settings(cap, target_width, target_height, target_fps):
     """
-    Initializes the source settings with the specified resolution and FPS.
+    Initializes the source settings, like a camera, with the specified resolution and FPS.
 
     :param cap: The cv2.VideoCapture object
     :param target_width: The desired width for the source feed
@@ -1433,6 +1435,9 @@ def init_source_settings(cap, target_width, target_height, target_fps):
         app.logger.warning(f"Warning: Desired resolution of {target_width}x{target_height} is not supported. Using {current_width}x{current_height} instead.")
 
 def control_loop():
+    """
+    Is the core of the program, the control loop permit to handle state machine and react as a consequence.
+    """
     if app.config['STATUS'] == 0: #idle
         return
 
@@ -1442,7 +1447,6 @@ def control_loop():
         cap.release()
         return
     cnn = YOLO(model_path)     # for i, layer in enumerate(cnn.model.model): print(f"Layer {i}: {layer}", flush=True)
-    for i, layer in enumerate(cnn.model.model): print(f"Layer {i}: {layer}", flush=True)
 
     cap = cv2.VideoCapture(app.config['INPUT_SRC'])
     if not cap.isOpened():
@@ -1460,8 +1464,28 @@ def control_loop():
     while True:     # TODO testa la velocita di inferenza normale e aprendo ogni layer
         if app.config['STATUS'] == 0: #idle
             break   #TODO aggiungi il caso in cui lo stream finisce, pensare se break oppure aspettare e poi break
+###################################
+#
+        ret, frame = cap.read()
+        if not ret:
+            print("Error: Unable to read frame from the video feed.")
+            break   # Using continue allows the loop to skip the current iteration and attempt to read the next frame. This approach assumes that the issue is transient and the video feed will resume
+        else:
+            results = cnn.predict(source=frame)
+
+        extracted_res = {
+            'inference_time': results[0].speed['inference'],        # Espressed in ms
+            'boxes': results[0].boxes.data.tolist() if results[0].boxes else [],        # Contain: [x1, y1, x2, y2, confidence, class_id]
+            # 'keypoints': results[0].keypoints.data.tolist() if results[0].keypoints else [],
+            # 'masks': results[0].masks.data.tolist() if results[0].masks else [],
+            'names': results[0].names,
+            # 'path': results[0].path,
+        }
+        print(f"------ {extracted_res}", flush=True)
+#
+###################################
         app.logger.info("loop")
-        time.sleep(1)
+        time.sleep(1) #TODO Can be used for tuning the FPS output
 
     cap.release()
 
@@ -1472,7 +1496,7 @@ def update_config_variable(variable_name, current_value, new_value, dict_entry, 
     :param variable_name: The name of the config variable to update.
     :param current_value: The current value of the variable.
     :param new_value: The new value from the user input (e.g., form submission).
-    :param dict_entry: Can be 0 or 1 depending on if putting the value as the key(0) or the value(1)
+    :param dict_entry: Can be 0 or 1 depending on if putting the value as for determinated dictionary key(1) or straight the value(0)
     :param valid_values: Optional dictionary or list of valid values for the variable.
                           If None, no validation is performed.
     :return: The updated value or current value if invalid.
@@ -1484,7 +1508,7 @@ def update_config_variable(variable_name, current_value, new_value, dict_entry, 
             app.config[variable_name] = new_value
         return new_value
     else:
-        return current_value  # Return the current value if invalid
+        return current_value
 
 ###
 #   ENDPOINTS
@@ -1528,6 +1552,7 @@ def change_input_video():
 def start_loop():
     global control_background_thread
 
+    # The control thread is set and if is running is no started another one. When the thread function returns the thread is killed
     if control_background_thread is None or not control_background_thread.is_alive():
         app.logger.info("Starting control loop thread")
         control_background_thread = threading.Thread(target=control_loop, daemon=True)
