@@ -1444,7 +1444,6 @@ def control_loop():
     model_path = MODEL_LIST.get(app.config.get('MODEL', None))
     if model_path is None:
         app.logger.error("Error: model configuration is missing.")
-        cap.release()
         return
     cnn = YOLO(model_path)     # for i, layer in enumerate(cnn.model.model): print(f"Layer {i}: {layer}", flush=True)
 
@@ -1459,7 +1458,7 @@ def control_loop():
             # TODO aggiungi per avere un effettivo uso di gRPC
             # init_gRPC()
     else:
-        init_source_settings(cap, 1080, 720, 30)
+        init_source_settings(cap, 1080, 720, 30)    #TODO embedded parametri, magari da impostare da fuori?
 
     while True:     # TODO testa la velocita di inferenza normale e aprendo ogni layer
         if app.config['STATUS'] == 0: #idle
