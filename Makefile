@@ -1,4 +1,8 @@
 DOCKER_COMPOSE_FILE = ./docker-compose.yml
+APP_DIR = ./Inference
+PYTHON ?= python3
+
+.PHONY: help build up down restart logs status clean cleanall check
 
 build:
 	docker compose -f $(DOCKER_COMPOSE_FILE) build
@@ -15,11 +19,16 @@ up:
 down:
 	docker compose -f $(DOCKER_COMPOSE_FILE) down --volumes --remove-orphans
 
+restart: down up
+
 logs:
 	docker compose -f $(DOCKER_COMPOSE_FILE) logs -f
 
 status:
 	docker ps -a
+
+check:
+	$(PYTHON) -m py_compile $(APP_DIR)/app.py
 
 # Define a help target to display available Makefile targets
 help:
@@ -27,8 +36,10 @@ help:
 	@echo "  status   : List the status of all containers"
 	@echo "  build    : Build Docker images using Docker Compose"
 	@echo "  up       : Run containers using Docker Compose in the background"
+	@echo "  restart  : Recreate the Docker Compose service"
 	@echo "  logs     : View logs of running containers"
 	@echo "  down     : Stop and remove containers defined in the Docker Compose file"
+	@echo "  check    : Compile the Flask app and catch syntax errors"
 	@echo "  clean    : Clean up containers and their networks and volumes"
 	@echo "  cleanall : Clean up containers, also stopped, and remove unused images"
 	@echo "  help     : Display this help message"

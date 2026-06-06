@@ -1,3 +1,3 @@
-flask
-opencv-python
-ultralytics
+Flask>=3.0,<4
+opencv-python-headless>=4.9,<5
+ultralytics>=8.3,<9

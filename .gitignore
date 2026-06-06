@@ -3,3 +3,11 @@ Inference/models/*
 
 # But keep the directory itself (optional)
 !Inference/models/.gitkeep
+
+# Local Codex/agent workspace files
+.agents/
+.codex/
+
+# Python cache files
+__pycache__/
+*.py[cod]

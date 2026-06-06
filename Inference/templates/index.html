@@ -5,94 +5,305 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>In-Fer-Ence</title>
     <style>
+        :root {
+            color-scheme: light;
+            --bg: #f6f7f9;
+            --panel: #ffffff;
+            --ink: #1f2933;
+            --muted: #607080;
+            --line: #d8dee6;
+            --accent: #1f7a8c;
+            --accent-strong: #145c6b;
+            --danger: #b42318;
+            --ok: #287d3c;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
+
+        main {
+            width: min(1120px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0;
+        }
+
+        header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
         h1 {
-            color: #333;
+            margin: 0;
+            font-size: clamp(1.8rem, 3vw, 3rem);
+            line-height: 1.05;
         }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 36px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: var(--panel);
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        section {
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+        }
+
+        section.wide {
+            grid-column: 1 / -1;
+        }
+
+        h2 {
+            margin: 0 0 14px;
+            font-size: 1rem;
+        }
+
+        p {
+            margin: 0 0 14px;
+            color: var(--muted);
+            overflow-wrap: anywhere;
+        }
+
         form {
-            margin: 20px 0;
+            display: grid;
+            gap: 10px;
         }
+
         label {
-            display: block;
-            margin: 5px 0;
+            color: var(--muted);
+            font-size: 0.88rem;
+            font-weight: 700;
         }
-        input, select, button {
-            padding: 8px;
-            margin: 5px 0;
-        }
+
+        input,
+        select,
         button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
+            width: 100%;
+            min-height: 40px;
+            border-radius: 6px;
+            font: inherit;
+        }
+
+        input,
+        select {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            padding: 8px 10px;
+        }
+
+        input[type="file"] {
+            padding: 7px;
+        }
+
+        button {
+            border: 0;
+            background: var(--accent);
+            color: #fff;
             cursor: pointer;
+            font-weight: 800;
         }
+
         button:hover {
-            background-color: #45a049;
+            background: var(--accent-strong);
         }
-        .status {
-            margin-top: 20px;
+
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stop {
+            background: var(--danger);
+        }
+
+        .stop:hover {
+            background: #8f1d14;
+        }
+
+        .result {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .metric {
+            min-height: 78px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fbfcfd;
+        }
+
+        .metric strong {
+            display: block;
+            margin-top: 4px;
+            font-size: 1.4rem;
+        }
+
+        .ok {
+            color: var(--ok);
+        }
+
+        .error {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .hint {
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 840px) {
+            header,
+            .grid,
+            .result {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                display: grid;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Flask Inference Splitting Control Panel</h1>
-    
-    <div class="status">
-        <p>- Current Status: {{ status }}</p>
-    </div>
-    
-    <form action="/change_status" method="POST">
-        <label>Change Status to:</label>
-        <select name="status">
-            {% for key, value in valid_statuses %}
-                <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ key | capitalize }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Change</button>
-    </form>
+    <main>
+        <header>
+            <div>
+                <h1>In-Fer-Ence</h1>
+                <p>YOLO control panel</p>
+            </div>
+            <div class="status-pill">
+                {{ state.status }}{% if state.loop_running %} · running{% else %} · stopped{% endif %}
+            </div>
+        </header>
 
-    <div class="status">
-        <p>- Current Inference Model: {{ model }}</p>
-    </div>
-    
-    <form action="/change_model" method="POST">
-        <label>Change Model to:</label>
-        <select name="model">
-            {% for key, value in model_list %}
-            <option value="{{ key }}" {% if model == key %}selected{% endif %}>{{ key | capitalize }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Change</button>
-    </form>
+        <div class="grid">
+            <section>
+                <h2>Status</h2>
+                <p>Current: <strong>{{ state.status }}</strong></p>
+                <form action="/change_status" method="POST">
+                    <label for="status">Change status</label>
+                    <select id="status" name="status">
+                        {% for key, value in valid_statuses %}
+                            <option value="{{ key }}" {% if state.status == key %}selected{% endif %}>{{ key }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Apply</button>
+                </form>
+            </section>
 
-    <div class="status">
-        <p>- Current Input Source: {{ input }}</p>
-    </div>
-    
-    <form action="/change_input_video" method="POST">
-        <label>Change Input Source (e.g. /dev/video0 or stream URL, RTMP, HLS (.m3u8)):</label>
-        <input type="text" name="input_video" placeholder="/dev/video0 or http://..." required>
-        <button type="submit">Change</button>
-    </form>
+            <section>
+                <h2>Model</h2>
+                {% if state.model %}
+                    <p>Current: <strong>{{ state.model }}</strong></p>
+                    <form action="/change_model" method="POST">
+                        <label for="model">Change model</label>
+                        <select id="model" name="model">
+                            {% for key, value in model_list %}
+                                <option value="{{ key }}" {% if state.model == key %}selected{% endif %}>{{ key }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit">Apply</button>
+                    </form>
+                {% else %}
+                    <p class="error">No model found in /models.</p>
+                {% endif %}
+            </section>
 
-    <!-- <form action="/change_input" method="POST">
-        <label>Change Video Input to:</label>
-        <select name="model">
-            {% for key, value in model_list %}
-            <option value="{{ key }}" {% if model == key %}selected{% endif %}>{{ key | capitalize }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Change</button>
-    </form> -->
+            <section>
+                <h2>Upload Models</h2>
+                <p class="hint">Max {{ state.max_upload_mb }} MB per request.</p>
+                <form action="/upload_models" method="POST" enctype="multipart/form-data">
+                    <label for="models">Model files</label>
+                    <input id="models" type="file" name="models" accept="{{ state.allowed_model_extensions | join(',') }}" multiple required>
+                    <p class="hint">{{ state.allowed_model_extensions | join(', ') }}</p>
+                    <button type="submit">Upload</button>
+                </form>
+            </section>
 
-    <form action="/start_loop" method="POST">
-        <button type="submit" style="background-color: #FFD700; color: #333; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 8px;">
-            Start
-        </button>
-    </form>
-    
+            <section>
+                <h2>Input</h2>
+                <p>Current: <strong>{{ state.input_source }}</strong></p>
+                <form action="/change_input_video" method="POST">
+                    <label for="input_video">Video source</label>
+                    <input id="input_video" type="text" name="input_video" value="{{ state.input_source }}" required>
+                    <button type="submit">Apply</button>
+                </form>
+            </section>
+
+            <section class="wide">
+                <h2>Loop</h2>
+                {% if state.last_error %}
+                    <p class="error">{{ state.last_error }}</p>
+                {% elif state.loop_running %}
+                    <p class="ok">Inference loop is running.</p>
+                {% else %}
+                    <p>Inference loop is stopped.</p>
+                {% endif %}
+                <div class="button-row">
+                    <form action="/start_loop" method="POST">
+                        <button type="submit">Start</button>
+                    </form>
+                    <form action="/stop_loop" method="POST">
+                        <button class="stop" type="submit">Stop</button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="wide">
+                <h2>Latest Result</h2>
+                {% if state.latest_result %}
+                    <div class="result">
+                        <div class="metric">
+                            <span>Detections</span>
+                            <strong>{{ state.latest_result.detections }}</strong>
+                        </div>
+                        <div class="metric">
+                            <span>Inference ms</span>
+                            <strong>{{ state.latest_result.inference_ms | round(2) }}</strong>
+                        </div>
+                        <div class="metric">
+                            <span>YOLO FPS</span>
+                            <strong>{{ state.latest_result.yolo_fps or "-" }}</strong>
+                        </div>
+                        <div class="metric">
+                            <span>Loop sec</span>
+                            <strong>{{ state.latest_result.loop_seconds }}</strong>
+                        </div>
+                    </div>
+                {% else %}
+                    <p>No inference result yet.</p>
+                {% endif %}
+            </section>
+        </div>
+    </main>
 </body>
 </html>
